@@ -9,6 +9,7 @@
 import Foundation
 #if !RX_NO_MODULE
 import RxSwift
+import RxSwiftExt
 import RxCocoa
 #endif
 
@@ -16,49 +17,27 @@ import UIKit
 
 // Two way binding operator between control property and variable, that's all it takes {
 
-infix operator <-> {
-}
+infix operator <->
 
-func nonMarkedText(textInput: UITextInput) -> String? {
-    let start = textInput.beginningOfDocument
-    let end = textInput.endOfDocument
-
-    guard let rangeAll = textInput.textRangeFromPosition(start, toPosition: end),
-        text = textInput.textInRange(rangeAll) else {
-            return nil
-    }
-
-    guard let markedTextRange = textInput.markedTextRange else {
-        return text
-    }
-
-    guard let startRange = textInput.textRangeFromPosition(start, toPosition: markedTextRange.start),
-        endRange = textInput.textRangeFromPosition(markedTextRange.end, toPosition: end) else {
-        return text
-    }
-
-    return (textInput.textInRange(startRange) ?? "") + (textInput.textInRange(endRange) ?? "")
-}
-
-func <-> (textInput: RxTextInput, variable: Variable<String>) -> Disposable {
+func <-> (textInput: UITextField, variable: Variable<String>) -> Disposable {
     let bindToUIDisposable = variable.asObservable()
-        .bindTo(textInput.rx_text)
-    let bindToVariable = textInput.rx_text
+        .bindTo(textInput.rx.text)
+    let bindToVariable = textInput.rx.text
         .subscribe(onNext: { [weak textInput] n in
             guard let textInput = textInput else {
                 return
             }
 
-            let nonMarkedTextValue = nonMarkedText(textInput)
+            let inputText = textInput.text
 
-            if nonMarkedTextValue != variable.value {
-                variable.value = nonMarkedTextValue ?? ""
+            if inputText != variable.value {
+                variable.value = inputText ?? ""
             }
         }, onCompleted:  {
             bindToUIDisposable.dispose()
         })
 
-    return StableCompositeDisposable.create(bindToUIDisposable, bindToVariable)
+    return CompositeDisposable(bindToUIDisposable, bindToVariable)
 }
 
 func <-> <T>(property: ControlProperty<T>, variable: Variable<T>) -> Disposable {
@@ -81,7 +60,7 @@ func <-> <T>(property: ControlProperty<T>, variable: Variable<T>) -> Disposable 
             bindToUIDisposable.dispose()
         })
 
-    return StableCompositeDisposable.create(bindToUIDisposable, bindToVariable)
+    return CompositeDisposable(bindToUIDisposable, bindToVariable)
 }
 
 // }

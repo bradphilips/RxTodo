@@ -10,14 +10,14 @@ import RxSwift
 
 private var _instances = [String: Any]()
 
-struct ModelService<Model: ModelType> {
+class ModelService<Model: ModelType> {
 
     let didCreate = PublishSubject<Model>()
     let didUpdate = PublishSubject<Model>()
     let didDelete = PublishSubject<Model>()
 
-    static func instance(modelClass: Model.Type) -> ModelService<Model> {
-        let key = String(modelClass)
+    static func instance(_ modelClass: Model.Type) -> ModelService<Model> {
+        let key = String(describing: modelClass)
         if let stream = _instances[key] as? ModelService<Model> {
             return stream
         }
@@ -31,15 +31,15 @@ struct ModelService<Model: ModelType> {
 extension ModelType {
 
     static var didCreate: PublishSubject<Self> {
-        return ModelService.instance(Self).didCreate
+        return ModelService.instance(Self.self).didCreate
     }
 
     static var didUpdate: PublishSubject<Self> {
-        return ModelService.instance(Self).didUpdate
+        return ModelService.instance(Self.self).didUpdate
     }
 
     static var didDelete: PublishSubject<Self> {
-        return ModelService.instance(Self).didDelete
+        return ModelService.instance(Self.self).didDelete
     }
 
 }

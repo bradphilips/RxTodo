@@ -16,36 +16,36 @@ protocol TaskListViewModelType {
 
     // Input
     var addButtonDidTap: PublishSubject<Void> { get }
-    var itemDidSelect: PublishSubject<NSIndexPath> { get }
-    var itemDeleted: PublishSubject<NSIndexPath> { get }
+    var itemDidSelect: PublishSubject<IndexPath> { get }
+    var itemDeleted: PublishSubject<IndexPath> { get }
 
     // Output
     var navigationBarTitle: Driver<String?> { get }
     var sections: Driver<[TaskListSection]> { get }
-    var presentTaskEditViewModel: Driver<TaskEditViewModel> { get }
+    var presentTaskEditViewModel: Driver<TaskEditViewModelType> { get }
 
 }
 
-struct TaskListViewModel: TaskListViewModelType {
+class TaskListViewModel: TaskListViewModelType {
 
     // MARK: Input
 
     let addButtonDidTap = PublishSubject<Void>()
-    let itemDidSelect = PublishSubject<NSIndexPath>()
-    var itemDeleted = PublishSubject<NSIndexPath>()
+    let itemDidSelect = PublishSubject<IndexPath>()
+    var itemDeleted = PublishSubject<IndexPath>()
 
 
     // MARK: Output
 
     let navigationBarTitle: Driver<String?>
     let sections: Driver<[TaskListSection]>
-    let presentTaskEditViewModel: Driver<TaskEditViewModel>
+    let presentTaskEditViewModel: Driver<TaskEditViewModelType>
 
 
     // MARK: Private
 
-    private let disposeBag = DisposeBag()
-    private var tasks: Variable<[Task]>
+    fileprivate let disposeBag = DisposeBag()
+    fileprivate var tasks: Variable<[Task]>
 
     init() {
         let defaultTasks = [
@@ -65,22 +65,22 @@ struct TaskListViewModel: TaskListViewModelType {
             .asDriver(onErrorJustReturn: [])
 
         self.itemDeleted
-            .subscribeNext { indexPath in
+            .subscribe(onNext: { indexPath in
                 let task = tasks.value[indexPath.row]
                 Task.didDelete.onNext(task)
-            }
+            })
             .addDisposableTo(self.disposeBag)
 
         //
         // View Controller Navigations
         //
-        let presentAddViewModel: Driver<TaskEditViewModel> = self.addButtonDidTap.asDriver()
-            .map { TaskEditViewModel(mode: .New) }
+        let presentAddViewModel: Driver<TaskEditViewModelType> = self.addButtonDidTap.asDriver()
+            .map { TaskEditViewModel(mode: .new) }
 
-        let presentEditViewModel: Driver<TaskEditViewModel> = self.itemDidSelect
+        let presentEditViewModel: Driver<TaskEditViewModelType> = self.itemDidSelect
             .map { indexPath in
                 let task = tasks.value[indexPath.row]
-                return TaskEditViewModel(mode: .Edit(task))
+                return TaskEditViewModel(mode: .edit(task))
             }
             .asDriver(onErrorDriveWith: .never())
 
@@ -90,25 +90,25 @@ struct TaskListViewModel: TaskListViewModelType {
         // Model Service
         //
         Task.didCreate
-            .subscribeNext { task in
-                self.tasks.value.insert(task, atIndex: 0)
-            }
+            .subscribe(onNext: { [unowned self] task in
+                self.tasks.value.insert(task, at: 0)
+            })
             .addDisposableTo(self.disposeBag)
 
         Task.didUpdate
-            .subscribeNext { task in
+            .subscribe(onNext: { [unowned self] task in
                 if let index = self.tasks.value.indexOf(task) {
                     self.tasks.value[index] = task
                 }
-            }
+            })
             .addDisposableTo(self.disposeBag)
 
         Task.didDelete
-            .subscribeNext { task in
+            .subscribe(onNext: { [unowned self] task in
                 if let index = self.tasks.value.indexOf(task) {
-                    self.tasks.value.removeAtIndex(index)
+                    self.tasks.value.remove(at: index)
                 }
-            }
+            })
             .addDisposableTo(self.disposeBag)
     }
 

@@ -10,8 +10,8 @@ import RxCocoa
 import RxSwift
 
 enum TaskEditViewMode {
-    case New
-    case Edit(Task)
+    case new
+    case edit(Task)
 }
 
 protocol TaskEditViewModelType {
@@ -62,11 +62,11 @@ struct TaskEditViewModel: TaskEditViewModelType {
 
     init(mode: TaskEditViewMode) {
         switch mode {
-        case .New:
+        case .new:
             self.navigationBarTitle = .just("New")
             self.title = Variable("")
 
-        case .Edit(let task):
+        case .edit(let task):
             self.navigationBarTitle = .just("Edit")
             self.title = Variable(task.title)
         }
@@ -80,8 +80,8 @@ struct TaskEditViewModel: TaskEditViewModelType {
             .withLatestFrom(self.title.asDriver())
             .map { title -> Bool in
                 switch mode {
-                case .New: return !title.isEmpty
-                case .Edit(let task): return title != task.title
+                case .new: return !title.isEmpty
+                case .edit(let task): return title != task.title
                 }
             }
 
@@ -98,11 +98,11 @@ struct TaskEditViewModel: TaskEditViewModelType {
             .withLatestFrom(self.title.asDriver())
             .map { title in
                 switch mode {
-                case .New:
+                case .new:
                     let newTask = Task(title: title)
                     Task.didCreate.onNext(newTask)
 
-                case .Edit(let task):
+                case .edit(let task):
                     let newTask = task.then {
                         $0.title = title
                     }

@@ -23,19 +23,21 @@ final class TaskListViewController: BaseViewController {
 
 
     // MARK: Properties
-
+    let viewModel: TaskListViewModelType
     let dataSource = RxTableViewSectionedReloadDataSource<TaskListSection>()
 
-    let addBarButtonItem = UIBarButtonItem(barButtonSystemItem: .Add, target: nil, action: Selector())
+    let addBarButtonItem = UIBarButtonItem(barButtonSystemItem: .add, target: nil, action: nil)
     let tableView = UITableView().then {
-        $0.registerCell(Reusable.taskCell)
+        $0.register(Reusable.taskCell)
     }
 
 
     // MARK: Initializing
 
     init(viewModel: TaskListViewModelType) {
+        self.viewModel = viewModel
         super.init()
+        
         self.navigationItem.rightBarButtonItem = self.addBarButtonItem
         self.configure(viewModel)
     }
@@ -49,14 +51,14 @@ final class TaskListViewController: BaseViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        self.view.backgroundColor = .whiteColor()
-        self.tableView.rx_setDelegate(self)
+        self.view.backgroundColor = .white
+        _ = self.tableView.rx.setDelegate(self)
         self.view.addSubview(self.tableView)
     }
 
     override func setupConstraints() {
         super.setupConstraints()
-        self.tableView.snp_makeConstraints { make in
+        self.tableView.snp.makeConstraints { make in
             make.edges.equalTo(0)
         }
     }
@@ -64,42 +66,42 @@ final class TaskListViewController: BaseViewController {
 
     // MARK: Configuring
 
-    private func configure(viewModel: TaskListViewModelType) {
+    fileprivate func configure(_ viewModel: TaskListViewModelType) {
         self.dataSource.configureCell = { _, tableView, indexPath, viewModel in
-            let cell = tableView.dequeueCell(Reusable.taskCell, forIndexPath: indexPath)
+            let cell = tableView.dequeue(Reusable.taskCell, for: indexPath)
             cell.configure(viewModel)
             return cell
         }
 
         // Input
-        self.addBarButtonItem.rx_tap
+        self.addBarButtonItem.rx.tap
             .bindTo(viewModel.addButtonDidTap)
             .addDisposableTo(self.disposeBag)
 
-        self.tableView.rx_itemSelected
+        self.tableView.rx.itemSelected
             .bindTo(viewModel.itemDidSelect)
             .addDisposableTo(self.disposeBag)
 
-        self.tableView.rx_itemDeleted
+        self.tableView.rx.itemDeleted
             .bindTo(viewModel.itemDeleted)
             .addDisposableTo(self.disposeBag)
 
         // Ouput
         viewModel.navigationBarTitle
-            .drive(self.navigationItem.rx_title)
+            .drive(self.navigationItem.rx.title)
             .addDisposableTo(self.disposeBag)
 
         viewModel.sections
-            .drive(self.tableView.rx_itemsWithDataSource(self.dataSource))
+            .drive(self.tableView.rx.items(dataSource: self.dataSource))
             .addDisposableTo(self.disposeBag)
 
         viewModel.presentTaskEditViewModel
-            .driveNext { [weak self] viewModel in
+            .drive(onNext: { [weak self] viewModel in
                 guard let `self` = self else { return }
                 let viewController = TaskEditViewController(viewModel: viewModel)
                 let navigationController = UINavigationController(rootViewController: viewController)
-                self.presentViewController(navigationController, animated: true, completion: nil)
-            }
+                self.present(navigationController, animated: true, completion: nil)
+            })
             .addDisposableTo(self.disposeBag)
     }
 
@@ -110,13 +112,15 @@ final class TaskListViewController: BaseViewController {
 
 extension TaskListViewController: UITableViewDelegate {
 
-    func tableView(tableView: UITableView, heightForRowAtIndexPath indexPath: NSIndexPath) -> CGFloat {
-        let viewModel = self.dataSource.itemAtIndexPath(indexPath)
-        return TaskCell.cellHeightThatFitsWidth(tableView.width, viewModel: viewModel)
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        if let viewModel = try! self.dataSource.model(at: indexPath) as? TaskCellModelType {
+            return TaskCell.cellHeightThatFitsWidth(tableView.width, viewModel: viewModel)
+        }
+        return 0
     }
 
-    func tableView(tableView: UITableView, didSelectRowAtIndexPath indexPath: NSIndexPath) {
-        tableView.deselectRowAtIndexPath(indexPath, animated: true)
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        tableView.deselectRow(at: indexPath, animated: true)
     }
 
 }

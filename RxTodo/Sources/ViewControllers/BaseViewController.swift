@@ -30,7 +30,7 @@ class BaseViewController: UIViewController {
 
     // MARK: Layout Constraints
 
-    private(set) var didSetupConstraints = false
+    fileprivate(set) var didSetupConstraints = false
 
     override func viewDidLoad() {
         self.view.setNeedsUpdateConstraints()
